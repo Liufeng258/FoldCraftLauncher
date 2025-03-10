@@ -7,7 +7,7 @@ public class RightArmSlimOverlay extends LimbCube {
     protected float[] rightArmSlimOverlayTexCoordinates;
     
     public RightArmSlimOverlay(float scale) {
-        super(3.1764708f * scale, 12.705883f * scale, 4.2352943f * scale, -5.5f * scale, 2.0f * scale, 0.0f * scale,
+        super(3.1764708f * scale, 12.705883f * scale, 4.2352943f * scale, 5.5f * scale, 2.0f * scale, 0.0f * scale,
                 1.0f, 0.0f, 0.0f,
                 0.5f, 10.0f, -10.0f,
                 -0.333f, 20.0f, -20.0f);
