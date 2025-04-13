@@ -27,6 +27,7 @@ import com.google.gson.JsonPrimitive
 import com.google.gson.JsonSerializationContext
 import com.google.gson.JsonSerializer
 import com.google.gson.annotations.JsonAdapter
+import com.mio.JavaManager
 import com.tungsten.fclauncher.FCLConfig
 import com.tungsten.fclauncher.plugins.RendererPlugin
 import com.tungsten.fclauncher.utils.FCLPath
@@ -72,7 +73,7 @@ class VersionSetting : Cloneable {
 
     // java
     val javaProperty: StringProperty =
-        SimpleStringProperty(this, "java", JavaVersion.JAVA_AUTO.versionName)
+        SimpleStringProperty(this, "java", "Auto")
     var java: String
         get() = javaProperty.get()
         set(java) {
@@ -188,7 +189,7 @@ class VersionSetting : Cloneable {
      * 1 - .minecraft/versions/&lt;version&gt;/<br></br>
      */
     val isolateGameDirProperty: BooleanProperty =
-        SimpleBooleanProperty(this, "isolateGameDir", false)
+        SimpleBooleanProperty(this, "isolateGameDir", true)
     var isIsolateGameDir: Boolean
         get() = isolateGameDirProperty.get()
         set(isolate) {
@@ -249,26 +250,6 @@ class VersionSetting : Cloneable {
         set(pojavBigCore) {
             pojavBigCoreProperty.set(pojavBigCore)
         }
-
-    // launcher settings
-    fun getJavaVersion(version: Version?): Task<JavaVersion> {
-        return Task.runAsync(Schedulers.androidUIThread()) {
-            if (java != JavaVersion.JAVA_AUTO.versionName &&
-                java != JavaVersion.JAVA_8.versionName &&
-                java != JavaVersion.JAVA_11.versionName &&
-                java != JavaVersion.JAVA_17.versionName &&
-                java != JavaVersion.JAVA_21.versionName
-            ) {
-                java = JavaVersion.JAVA_AUTO.versionName
-            }
-        }.thenSupplyAsync {
-            if (java == JavaVersion.JAVA_AUTO.versionName) {
-                return@thenSupplyAsync JavaVersion.getSuitableJavaVersion(version)
-            } else {
-                return@thenSupplyAsync JavaVersion.getJavaFromVersionName(java)
-            }
-        }
-    }
 
     fun checkController() {
         Controllers.addCallback {
@@ -385,7 +366,9 @@ class VersionSetting : Cloneable {
                 vs.isAutoMemory = json["autoMemory"]?.asBoolean ?: true
                 vs.permSize = json["permSize"]?.asString ?: ""
                 vs.serverIp = json["serverIp"]?.asString ?: ""
-                vs.java = json["java"]?.asString ?: JavaVersion.JAVA_AUTO.versionName
+                vs.java =
+                    JavaManager.javaList.find { it.name == json["java"]?.asString }?.name
+                        ?: "Auto"
                 vs.scaleFactor = json["scaleFactor"]?.asDouble ?: 1.0
                 vs.isNotCheckGame = json["notCheckGame"]?.asBoolean ?: false
                 vs.isNotCheckJVM = json["notCheckJVM"]?.asBoolean ?: false
@@ -393,7 +376,8 @@ class VersionSetting : Cloneable {
                 vs.isVKDriverSystem = json["vulkanDriverSystem"]?.asBoolean ?: false
                 vs.controller = json["controller"]?.asString ?: ("00000000")
                 val renderers = FCLConfig.Renderer.entries.toTypedArray()
-                vs.renderer = renderers[json["renderer"]?.asInt?.coerceIn(0, renderers.size - 1) ?: 0]
+                vs.renderer =
+                    renderers[json["renderer"]?.asInt?.coerceIn(0, renderers.size - 1) ?: 0]
                 vs.driver = json["driver"]?.asString ?: "Turnip"
                 vs.isIsolateGameDir = json["isolateGameDir"]?.asBoolean ?: false
                 vs.customRenderer = json["customRenderer"]?.asString ?: ""
