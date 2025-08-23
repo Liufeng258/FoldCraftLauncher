@@ -73,19 +73,23 @@ public class FCLInput implements View.OnCapturedPointerListener {
 
     public void setPointer(int x, int y, String id) {
         if (id.equals(pointerId) || id.equals("Gyro")) {
-            if (menu.getCursorMode() == FCLBridge.CursorEnabled) {
-                menu.getCursor().setX(x);
-                menu.getCursor().setY(y);
-            }
-            if (menu.getCursorMode() == FCLBridge.CursorEnabled) {
-                menu.setCursorX(x);
-                menu.setCursorY(y);
-            }
-            menu.setPointerX(x);
-            menu.setPointerY(y);
-            if (menu.getBridge() != null) {
-                menu.getBridge().pushEventPointer((int) (x * menu.getBridge().getScaleFactor()), (int) (y * menu.getBridge().getScaleFactor()));
-            }
+            setPointer(x, y);
+        }
+    }
+
+    public void setPointer(int x, int y) {
+        if (menu.getCursorMode() == FCLBridge.CursorEnabled) {
+            menu.getCursor().setX(x);
+            menu.getCursor().setY(y);
+        }
+        if (menu.getCursorMode() == FCLBridge.CursorEnabled) {
+            menu.setCursorX(x);
+            menu.setCursorY(y);
+        }
+        menu.setPointerX(x);
+        menu.setPointerY(y);
+        if (menu.getBridge() != null) {
+            menu.getBridge().pushEventPointer((int) (x * menu.getBridge().getScaleFactor()), (int) (y * menu.getBridge().getScaleFactor()));
         }
     }
 
@@ -117,7 +121,9 @@ public class FCLInput implements View.OnCapturedPointerListener {
         view.setFocusableInTouchMode(true);
         view.setOnCapturedPointerListener(this);
         view.getViewTreeObserver().addOnWindowFocusChangeListener(hasFocus -> {
-            view.requestPointerCapture();
+            if (!menu.getMenuSetting().isPhysicalMouseMode()) {
+                view.requestPointerCapture();
+            }
         });
         view.requestFocus();
 
@@ -206,10 +212,14 @@ public class FCLInput implements View.OnCapturedPointerListener {
         }
         // shift + enter switch soft keyboard state
         if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER && KeyEvent.metaStateHasModifiers(event.getMetaState(), KeyEvent.META_SHIFT_ON)) {
-            if (!menu.getTouchCharInput().isLock() && event.getAction() == KeyEvent.ACTION_UP && !menu.getTouchCharInput().isEnabled()) {
+            if (event.getAction() == KeyEvent.ACTION_UP) {
                 menu.getTouchCharInput().switchKeyboardState();
-            } else if (menu.getTouchCharInput().isLock()) {
-                menu.getTouchCharInput().setLock(false);
+            }
+            return true;
+        }
+        if (event.getKeyCode() == KeyEvent.KEYCODE_ENTER) {
+            if (event.getAction() == KeyEvent.ACTION_UP) {
+                menu.getTouchCharInput().hide();
             }
             return true;
         }
@@ -243,6 +253,11 @@ public class FCLInput implements View.OnCapturedPointerListener {
                 choreographer.postFrameCallback(frameCallback);
             }
             return gamepad.handleMotionEventInput(event);
+        } else if (event.getSource() == InputDevice.SOURCE_MOUSE && event.getActionMasked() == MotionEvent.ACTION_SCROLL) {
+            for (int i = 0; i < Math.abs((int) event.getAxisValue(MotionEvent.AXIS_VSCROLL)); i++) {
+                sendKeyEvent(event.getAxisValue(MotionEvent.AXIS_VSCROLL) > 0 ? MOUSE_SCROLL_UP : MOUSE_SCROLL_DOWN, true);
+            }
+            return true;
         }
         return false;
     }

@@ -343,6 +343,9 @@ public class ControlButton extends AppCompatButton implements CustomView {
                     break;
             }
         } else {
+            if (menu.getTouchController() != null && getData().getEvent().isPointerFollow()) {
+                menu.getTouchController().moveView(event);
+            }
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
                     setPressedStyle();
@@ -695,7 +698,7 @@ public class ControlButton extends AppCompatButton implements CustomView {
                     }
                     menu.getInput().sendKeyEvent(FCLKeycodes.KEY_ENTER, true);
                     menu.getInput().sendKeyEvent(FCLKeycodes.KEY_ENTER, false);
-                }, 50);
+                }, 150);
             }
         }
         for (String id : event.bindViewGroupList()) {

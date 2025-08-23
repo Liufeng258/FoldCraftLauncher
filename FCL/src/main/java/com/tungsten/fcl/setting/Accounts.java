@@ -216,8 +216,12 @@ public final class Accounts {
             }
         });
 
-        globalAccountStorages.addListener(onInvalidating(() ->
-                dispatcher.accept(Config.CONFIG_GSON.toJson(globalAccountStorages))));
+        globalAccountStorages.addListener(onInvalidating(() -> {
+            try {
+                dispatcher.accept(Config.CONFIG_GSON.toJson(globalAccountStorages));
+            } catch (Throwable ignore) {
+            }
+        }));
     }
 
     private static Account parseAccount(Map<Object, Object> storage) {
@@ -464,6 +468,8 @@ public final class Accounts {
                 return context.getString(R.string.account_methods_microsoft_error_country_unavailable);
             } else if (errorCode == MicrosoftService.XboxAuthorizationException.MISSING_XBOX_ACCOUNT) {
                 return context.getString(R.string.account_methods_microsoft_error_missing_xbox_account);
+            } else if (errorCode == MicrosoftService.XboxAuthorizationException.BANNED) {
+                return context.getString(R.string.account_methods_microsoft_error_banned);
             } else {
                 return context.getString(R.string.account_methods_microsoft_error_unknown);
             }
