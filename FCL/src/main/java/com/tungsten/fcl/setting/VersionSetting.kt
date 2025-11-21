@@ -29,7 +29,6 @@ import com.google.gson.JsonSerializer
 import com.google.gson.annotations.JsonAdapter
 import com.mio.JavaManager
 import com.mio.data.Renderer
-import com.mio.manager.RendererManager
 import com.tungsten.fclauncher.utils.FCLPath
 import com.tungsten.fclcore.fakefx.beans.InvalidationListener
 import com.tungsten.fclcore.fakefx.beans.property.BooleanProperty
@@ -74,14 +73,11 @@ class VersionSetting : Cloneable {
             javaProperty.set(java)
         }
 
-    val permSizeProperty: StringProperty = SimpleStringProperty(this, "permSize", "")
-    var permSize: String
-        /**
-         * The permanent generation size of JVM garbage collection.
-         */
-        get() = permSizeProperty.get()
-        set(permSize) {
-            permSizeProperty.set(permSize)
+    val uuidProperty: StringProperty = SimpleStringProperty(this, "uuid", "")
+    var uuid: String
+        get() = uuidProperty.get()
+        set(value) {
+            uuidProperty.set(value)
         }
 
     val maxMemoryProperty: IntegerProperty =
@@ -235,6 +231,14 @@ class VersionSetting : Cloneable {
             pojavBigCoreProperty.set(pojavBigCore)
         }
 
+    val notCheckModProperty: BooleanProperty =
+        SimpleBooleanProperty(this, "notCheckMod", false)
+    var isNotCheckMod: Boolean
+        get() = notCheckModProperty.get()
+        set(value) {
+            notCheckModProperty.set(value)
+        }
+
     fun checkController() {
         Controllers.addCallback {
             Controllers.checkControllers()
@@ -249,7 +253,6 @@ class VersionSetting : Cloneable {
     fun addPropertyChangedListener(listener: InvalidationListener?) {
         usesGlobalProperty.addListener(listener)
         javaProperty.addListener(listener)
-        permSizeProperty.addListener(listener)
         maxMemoryProperty.addListener(listener)
         minMemoryProperty.addListener(listener)
         autoMemoryProperty.addListener(listener)
@@ -266,13 +269,14 @@ class VersionSetting : Cloneable {
         rendererProperty.addListener(listener)
         driverProperty.addListener(listener)
         pojavBigCoreProperty.addListener(listener)
+        uuidProperty.addListener(listener)
+        notCheckModProperty.addListener(listener)
     }
 
     public override fun clone(): VersionSetting {
         return VersionSetting().also {
             it.isUsesGlobal = isUsesGlobal
             it.java = java
-            it.permSize = permSize
             it.maxMemory = maxMemory
             it.minMemory = minMemory
             it.isAutoMemory = isAutoMemory
@@ -289,6 +293,8 @@ class VersionSetting : Cloneable {
             it.renderer = renderer
             it.driver = driver
             it.isPojavBigCore = isPojavBigCore
+            it.uuid = uuid
+            it.isNotCheckMod = isNotCheckMod
         }
     }
 
@@ -309,7 +315,6 @@ class VersionSetting : Cloneable {
                 )
                 addProperty("minMemory", src.minMemory)
                 addProperty("autoMemory", src.isAutoMemory)
-                addProperty("permSize", src.permSize)
                 addProperty("serverIp", src.serverIp)
                 addProperty("java", src.java)
                 addProperty("newScaleFactor", src.scaleFactor)
@@ -322,6 +327,8 @@ class VersionSetting : Cloneable {
                 addProperty("driver", src.driver)
                 addProperty("isolateGameDir", src.isIsolateGameDir)
                 addProperty("pojavBigCore", src.isPojavBigCore)
+                addProperty("uuid", src.uuid)
+                addProperty("notCheckMod", src.isNotCheckMod)
             }
         }
 
@@ -345,7 +352,6 @@ class VersionSetting : Cloneable {
                 vs.maxMemory = maxMemoryN
                 vs.minMemory = json["minMemory"]?.asInt
                 vs.isAutoMemory = json["autoMemory"]?.asBoolean ?: true
-                vs.permSize = json["permSize"]?.asString ?: ""
                 vs.serverIp = json["serverIp"]?.asString ?: ""
                 vs.java =
                     JavaManager.javaList.find { it.name == json["java"]?.asString }?.name
@@ -361,6 +367,8 @@ class VersionSetting : Cloneable {
                 vs.driver = json["driver"]?.asString ?: "Turnip"
                 vs.isIsolateGameDir = json["isolateGameDir"]?.asBoolean ?: false
                 vs.isPojavBigCore = json["pojavBigCore"]?.asBoolean ?: false
+                vs.uuid = json["uuid"]?.asString ?: ""
+                vs.isNotCheckMod = json["notCheckMod"]?.asBoolean ?: false
             }
         }
 
