@@ -11,18 +11,18 @@ public class LeftArmSlimOverlay extends LimbCube {
                 1.0f, 0.0f, 0.0f,
                 -0.5f, 10.0f, -10.0f,
                 0.333f, 20.0f, -20.0f);
-        float slimRatio = 3.1764708f / 4.2352943f;
+        float pixel = 1.0f / 64.0f;
         this.leftArmSlimOverlayTexCoordinates = new float[] {
-                0.8125f, 1.0f, 0.8125f, 0.90625f, 0.8125f + 0.0625f * slimRatio, 0.90625f, 0.8125f + 0.0625f * slimRatio, 1.0f,
-                0.8125f, 0.90625f, 0.8125f, 0.8125f, 0.8125f + 0.0625f * slimRatio, 0.8125f, 0.8125f + 0.0625f * slimRatio, 0.90625f,
-                0.8125f, 0.8125f, 0.8125f, 0.75f, 0.8125f + 0.0625f * slimRatio, 0.75f, 0.8125f + 0.0625f * slimRatio, 0.8125f,
-                0.875f, 0.8125f, 0.875f, 0.75f, 0.875f + 0.0625f * slimRatio, 0.75f, 0.875f + 0.0625f * slimRatio, 0.8125f,
-                0.875f, 1.0f, 0.875f, 0.90625f, 0.875f + 0.0625f * slimRatio, 0.90625f, 0.875f + 0.0625f * slimRatio, 1.0f,
-                0.875f, 0.90625f, 0.875f, 0.8125f, 0.875f + 0.0625f * slimRatio, 0.8125f, 0.875f + 0.0625f * slimRatio, 0.90625f,
-                0.75f, 1.0f, 0.75f, 0.90625f, 0.75f + 0.0625f * slimRatio, 0.90625f, 0.75f + 0.0625f * slimRatio, 1.0f,
-                0.75f, 0.90625f, 0.75f, 0.8125f, 0.75f + 0.0625f * slimRatio, 0.8125f, 0.75f + 0.0625f * slimRatio, 0.90625f,
-                0.9375f, 1.0f, 0.9375f, 0.90625f, 0.9375f + 0.0625f * slimRatio, 0.90625f, 0.9375f + 0.0625f * slimRatio, 1.0f,
-                0.9375f, 0.90625f, 0.9375f, 0.8125f, 0.9375f + 0.0625f * slimRatio, 0.8125f, 0.9375f + 0.0625f * slimRatio, 0.90625f
+                0.8125f, 0.8125f, 0.8125f, 0.75f, 0.875f, 0.75f, 0.875f, 0.8125f,
+                0.8125f, 0.90625f, 0.8125f, 0.8125f, 0.875f, 0.8125f, 0.875f, 0.90625f,
+                0.8125f, 1.0f, 0.8125f, 0.90625f, 0.875f, 0.90625f, 0.875f, 1.0f,
+                0.8125f + pixel, 0.8125f, 0.8125f + pixel, 0.75f, 0.875f + pixel, 0.75f, 0.875f + pixel, 0.8125f,
+                0.875f, 0.90625f, 0.875f, 0.8125f, 0.9375f, 0.8125f, 0.9375f, 0.90625f,
+                0.9375f, 0.90625f, 0.9375f, 0.8125f, 1.0f, 0.8125f, 1.0f, 0.90625f,
+                0.75f, 0.90625f - pixel, 0.75f, 0.8125f - pixel, 0.8125f, 0.8125f - pixel, 0.8125f, 0.90625f - pixel,
+                0.75f, 1.0f - pixel, 0.75f, 0.90625f - pixel, 0.8125f, 0.90625f - pixel, 0.8125f, 1.0f - pixel,
+                0.875f - pixel, 1.0f, 0.875f - pixel, 0.90625f, 0.9375f - pixel, 0.90625f, 0.9375f - pixel, 1.0f,
+                0.9375f - pixel, 1.0f, 0.9375f - pixel, 0.90625f, 1.0f - pixel, 0.90625f, 1.0f - pixel, 1.0f
         };
         addTextures(this.leftArmSlimOverlayTexCoordinates);
     }
