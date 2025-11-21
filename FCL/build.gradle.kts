@@ -41,8 +41,8 @@ android {
         applicationId = "com.tungsten.fcl"
         minSdk = libs.versions.minSdk.get().toInt()
         targetSdk = libs.versions.targetSdk.get().toInt()
-        versionCode = 1248
-        versionName = "1.2.4.8"
+        versionCode = 1268
+        versionName = "1.2.6.8"
     }
 
     buildTypes {
@@ -140,7 +140,6 @@ dependencies {
     implementation(project(":FCLCore"))
     implementation(project(":FCLLibrary"))
     implementation(project(":FCLauncher"))
-    implementation(project(":NG-GL4ES"))
     implementation("com.getkeepsafe.taptargetview:taptargetview:1.14.0")
     implementation("org.nanohttpd:nanohttpd:2.3.1")
     implementation("org.apache.commons:commons-compress:1.26.0")

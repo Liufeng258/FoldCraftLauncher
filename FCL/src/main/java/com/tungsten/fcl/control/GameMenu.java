@@ -8,13 +8,14 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.util.Log;
+import android.view.InputDevice;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.CompoundButton;
 import android.widget.RelativeLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -134,6 +135,8 @@ public class GameMenu implements MenuCallback, View.OnClickListener {
     private MenuView menuView;
 
     private TouchController touchController;
+
+    private boolean gamepadDisabled = false;
 
     public void setMenuView(MenuView menuView) {
         this.menuView = menuView;
@@ -289,6 +292,10 @@ public class GameMenu implements MenuCallback, View.OnClickListener {
         return viewGroupProperty.get();
     }
 
+    public boolean isGamepadDisabled(){
+        return gamepadDisabled;
+    }
+
     private void initLeftMenu() {
         FCLSwitch editMode = findViewById(R.id.edit_mode);
         FCLSwitch showViewBoundaries = findViewById(R.id.show_boundary);
@@ -371,6 +378,7 @@ public class GameMenu implements MenuCallback, View.OnClickListener {
         FCLSwitch showLogSwitch = findViewById(R.id.switch_show_log);
         FCLSwitch performanceModeSwitch = findViewById(R.id.switch_performance);
         FCLSwitch autoShowLogSwitch = findViewById(R.id.switch_auto_show_log);
+        FCLSwitch disableGamepadMapping = findViewById(R.id.switch_disable_gamepad_mapping);
 
         FCLSpinner<GestureMode> gestureModeSpinner = findViewById(R.id.gesture_mode_spinner);
         FCLSpinner<MouseMoveMode> mouseMoveModeSpinner = findViewById(R.id.mouse_mode_spinner);
@@ -390,6 +398,10 @@ public class GameMenu implements MenuCallback, View.OnClickListener {
         gamepadButtonBinding = findViewById(R.id.gamepad_reset_button_binding);
         forceExit = findViewById(R.id.force_exit);
 
+        disableGamepadMapping.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            gamepadDisabled = isChecked;
+        });
+
         FXUtils.bindBoolean(lockMenuSwitch, menuSetting.getLockMenuViewProperty());
         FXUtils.bindBoolean(hideMenuSwitch, menuSetting.getHideMenuViewViewProperty());
         FXUtils.bindBoolean(disableSoftKeyAdjustSwitch, menuSetting.getDisableSoftKeyAdjustProperty());
@@ -402,8 +414,10 @@ public class GameMenu implements MenuCallback, View.OnClickListener {
         FXUtils.bindBoolean(autoShowLogSwitch, menuSetting.getAutoShowLogProperty());
 
         performanceModeSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            menuSetting.getPerformanceModeProperty().setValue(isChecked);
             activity.getWindow().setSustainedPerformanceMode(isChecked);
         });
+        performanceModeSwitch.setChecked(menuSetting.isPerformanceMode());
 
         menuSetting.getHideMenuViewViewProperty().addListener(i -> {
             menuView.setVisibility(menuSetting.isHideMenuView() ? View.INVISIBLE : View.VISIBLE);
@@ -432,6 +446,10 @@ public class GameMenu implements MenuCallback, View.OnClickListener {
             }
         });
         showFps.setChecked(menuSetting.isShowFps());
+        showFps.setOnLongClickListener((view -> {
+            fpsText.resetPosition();
+            return true;
+        }));
 
         logWindow.visibilityProperty().setValue(menuSetting.isShowLog() || (!isSimulated() && menuSetting.isAutoShowLog()));
         menuSetting.getShowLogProperty().addListener(observable -> {
@@ -616,15 +634,17 @@ public class GameMenu implements MenuCallback, View.OnClickListener {
             touchControllerInputView.setDisableFullScreenInput(sharedPreferences.getBoolean("disableFullscreenInput", true));
         }
 
-        touchPad.setOnHoverListener((view, motionEvent) -> {
-            if (menuSetting.isPhysicalMouseMode()) {
+        touchPad.setOnGenericMotionListener((view, motionEvent) -> {
+            if (motionEvent.isFromSource(InputDevice.SOURCE_MOUSE) && menuSetting.isPhysicalMouseMode()) {
                 if (getCursorMode() == FCLBridge.CursorEnabled && motionEvent.getAction() == MotionEvent.ACTION_HOVER_MOVE) {
                     getInput().setPointer((int) motionEvent.getRawX(), (int) motionEvent.getRawY());
                     return true;
                 }
+                return fclInput.handleExternalMouseEvent(motionEvent);
             }
             return false;
         });
+
     }
 
     @Override

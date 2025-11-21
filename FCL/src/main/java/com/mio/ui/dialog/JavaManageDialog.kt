@@ -4,9 +4,9 @@ import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.net.toUri
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.mio.JavaManager
 import com.mio.ui.adapter.ManageJavaItemAdapter
@@ -89,8 +89,8 @@ class JavaManageDialog(context: Context, val onSelected: (String) -> Unit) : FCL
                         data: Intent?
                     ) {
                         if (requestCode == RequestCodes.SELECT_JAVA_CODE && resultCode == Activity.RESULT_OK && data != null) {
-                            val path = FileBrowser.getSelectedFiles(data).get(0)
-                            val uri = Uri.parse(path)
+                            val path = FileBrowser.getSelectedFiles(data)[0]
+                            val uri = path.toUri()
                             val fileName = if (AndroidUtils.isDocUri(uri)) {
                                 AndroidUtils.getFileName(context, uri)
                             } else {
@@ -168,15 +168,12 @@ class JavaManageDialog(context: Context, val onSelected: (String) -> Unit) : FCL
                 isLoading = false
                 binding.progress.visibility = View.GONE
                 binding.recyclerView.visibility = View.VISIBLE
+                val javaDir = File(
+                    FCLPath.JAVA_PATH,
+                    fileName
+                )
                 if (it) {
-                    JavaManager.addToJavaVersion(
-                        File(
-                            FCLPath.JAVA_PATH,
-                            fileName
-                        )
-                    )
-                    refresh()
-                    binding.recyclerView.adapter?.notifyDataSetChanged()
+                    addJava(javaDir)
                 } else {
                     FCLAlertDialog.Builder(context)
                         .setMessage(context.getString(R.string.import_java_error))
@@ -184,27 +181,41 @@ class JavaManageDialog(context: Context, val onSelected: (String) -> Unit) : FCL
                             FCLAlertDialog.AlertLevel.ALERT
                         )
                         .setPositiveButton(context.getString(R.string.mod_check_continue)) {
-                            JavaManager.addToJavaVersion(
-                                File(
-                                    FCLPath.JAVA_PATH,
-                                    fileName
-                                )
-                            )
-                            refresh()
-                            binding.recyclerView.adapter?.notifyDataSetChanged()
+                            addJava(javaDir)
                         }
                         .setNegativeButton(context.getString(R.string.button_cancel)) {
                             FileUtils.deleteDirectory(
-                                File(
-                                    FCLPath.JAVA_PATH,
-                                    fileName
-                                )
+                                javaDir
                             )
                         }
                         .create()
                         .show()
                 }
             }
+        }
+    }
+
+    private fun addJava(javaDir: File) {
+        if (JavaManager.addToJavaVersion(
+                javaDir
+            )
+        ) {
+            refresh()
+            binding.recyclerView.adapter?.notifyDataSetChanged()
+        } else {
+            FileUtils.deleteDirectory(
+                javaDir
+            )
+            FCLAlertDialog.Builder(context)
+                .setMessage(context.getString(R.string.import_java_error_not_valid))
+                .setAlertLevel(
+                    FCLAlertDialog.AlertLevel.ALERT
+                )
+                .setNegativeButton(context.getString(com.tungsten.fcllibrary.R.string.dialog_positive)) {
+
+                }
+                .create()
+                .show()
         }
     }
 

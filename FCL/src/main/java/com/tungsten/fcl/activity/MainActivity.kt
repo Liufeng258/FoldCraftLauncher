@@ -26,10 +26,12 @@ import androidx.core.graphics.drawable.toDrawable
 import androidx.core.view.forEach
 import androidx.core.view.postDelayed
 import androidx.lifecycle.lifecycleScope
+import com.mio.manager.RendererManager
 import com.mio.ui.dialog.RendererSelectDialog
 import com.mio.util.AnimUtil
 import com.mio.util.AnimUtil.Companion.interpolator
 import com.mio.util.AnimUtil.Companion.startAfter
+import com.mio.util.DisplayUtil
 import com.mio.util.GuideUtil
 import com.mio.util.GuideUtil.Companion.guideTarget
 import com.mio.util.ImageUtil
@@ -102,8 +104,10 @@ class MainActivity : FCLActivity(), OnSelectListener, View.OnClickListener {
     private val holder = WeakListenerHolder()
     private lateinit var profile: Profile
     private lateinit var theme: IntegerProperty
+    private lateinit var theme2: IntegerProperty
+    private lateinit var theme2Dark: IntegerProperty
     var isVersionLoading = false
-    private lateinit var permissionResultLauncher: ActivityResultLauncher<String>
+    lateinit var permissionResultLauncher: ActivityResultLauncher<String>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -144,6 +148,8 @@ class MainActivity : FCLActivity(), OnSelectListener, View.OnClickListener {
         if (!ConfigHolder.isInit()) {
             try {
                 ConfigHolder.init()
+                //当强制关闭进程时，不会经过SplashActivity，此时需要重新初始化
+                RendererManager.init(this@MainActivity)
             } catch (e: IOException) {
                 LOG.log(Level.WARNING, e.message)
             }
@@ -194,7 +200,7 @@ class MainActivity : FCLActivity(), OnSelectListener, View.OnClickListener {
                 uiManager.registerDefaultBackEvent {
                     if (uiManager.currentUI === uiManager.mainUI) {
                         val i = Intent(Intent.ACTION_MAIN)
-                        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        i.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                         i.addCategory(Intent.CATEGORY_HOME)
                         startActivity(i)
                         exitProcess(0)
@@ -261,6 +267,7 @@ class MainActivity : FCLActivity(), OnSelectListener, View.OnClickListener {
         permissionResultLauncher =
             registerForActivityResult(ActivityResultContracts.RequestPermission()) {
             }
+        setupLiveBackground()
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
@@ -274,11 +281,24 @@ class MainActivity : FCLActivity(), OnSelectListener, View.OnClickListener {
     override fun onPause() {
         super.onPause()
         _uiManager?.onPause()
+        if (shouldPlayVideo() && binding.videoView.isPlaying) {
+            binding.videoView.pause()
+        }
     }
 
     override fun onResume() {
         super.onResume()
         _uiManager?.onResume()
+        if (shouldPlayVideo() && !binding.videoView.isPlaying) {
+            binding.videoView.start()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        if (shouldPlayVideo()) {
+            binding.videoView.stopPlayback()
+        }
     }
 
     override fun onSelect(view: FCLMenuView) {
@@ -369,7 +389,11 @@ class MainActivity : FCLActivity(), OnSelectListener, View.OnClickListener {
                         it.driver == selectedProfile.getVersionSetting(selectedProfile.selectedVersion).driver
                     }
                 }.getOrNull() ?: DriverPlugin.driverList[0]
+                DisplayUtil.refreshDisplayMetrics(this@MainActivity)
                 Versions.launch(this@MainActivity, selectedProfile)
+                if (shouldPlayVideo()) {
+                    binding.videoView.stopPlayback()
+                }
             }
         }
     }
@@ -511,40 +535,45 @@ class MainActivity : FCLActivity(), OnSelectListener, View.OnClickListener {
         }
     }
 
+    private fun updateColor() {
+        binding.apply {
+            backend.setSelectedBackground(ThemeEngine.getInstance().theme.ltColor)
+            backend.setDivider(
+                ThemeEngine.getInstance().theme.color2,
+                ConvertUtils.dip2px(this@MainActivity, 1f),
+                1,
+                1
+            )
+            backend.setBorder(
+                ConvertUtils.dip2px(this@MainActivity, 1f),
+                ThemeEngine.getInstance().theme.color2,
+                0,
+                0
+            )
+            backend.setRipple(ThemeEngine.getInstance().theme.color2)
+            pojav.textColor = ThemeEngine.getInstance().theme.color2
+            boat.textColor = ThemeEngine.getInstance().theme.color2
+            start.background = createBackground()
+            createBackground().apply {
+                version.background = this
+                jar.background = this
+            }
+            version.backgroundTintList =
+                ColorStateList.valueOf(ThemeEngine.getInstance().theme.color2).apply {
+                    version.backgroundTintList = this
+                    jar.backgroundTintList = this
+                }
+            version.setTextColor(ThemeEngine.getInstance().theme.color2)
+            jar.setTextColor(ThemeEngine.getInstance().theme.color2)
+        }
+
+    }
+
     private fun initBackground() {
         theme = object : IntegerPropertyBase() {
             override fun invalidated() {
                 get()
-                binding.apply {
-                    backend.setSelectedBackground(ThemeEngine.getInstance().theme.ltColor)
-                    backend.setDivider(
-                        ThemeEngine.getInstance().theme.color2,
-                        ConvertUtils.dip2px(this@MainActivity, 1f),
-                        1,
-                        1
-                    )
-                    backend.setBorder(
-                        ConvertUtils.dip2px(this@MainActivity, 1f),
-                        ThemeEngine.getInstance().theme.color2,
-                        0,
-                        0
-                    )
-                    backend.setRipple(ThemeEngine.getInstance().theme.color2)
-                    pojav.textColor = ThemeEngine.getInstance().theme.color2
-                    boat.textColor = ThemeEngine.getInstance().theme.color2
-                    start.background = createBackground()
-                    createBackground().apply {
-                        version.background = this
-                        jar.background = this
-                    }
-                    version.backgroundTintList =
-                        ColorStateList.valueOf(ThemeEngine.getInstance().theme.color2).apply {
-                            version.backgroundTintList = this
-                            jar.backgroundTintList = this
-                        }
-                    version.setTextColor(ThemeEngine.getInstance().theme.color2)
-                    jar.setTextColor(ThemeEngine.getInstance().theme.color2)
-                }
+                updateColor()
             }
 
             override fun getBean(): Any? {
@@ -555,8 +584,37 @@ class MainActivity : FCLActivity(), OnSelectListener, View.OnClickListener {
                 return "theme"
             }
         }
+        theme2 = object : IntegerPropertyBase() {
+            override fun invalidated() {
+                get()
+                updateColor()
+            }
+
+            override fun getBean(): Any? {
+                return this
+            }
+
+            override fun getName(): String? {
+                return "theme2"
+            }
+        }
+        theme2Dark = object : IntegerPropertyBase() {
+            override fun invalidated() {
+                get()
+                updateColor()
+            }
+
+            override fun getBean(): Any? {
+                return this
+            }
+
+            override fun getName(): String? {
+                return "theme2Dark"
+            }
+        }
         theme.bind(ThemeEngine.getInstance().theme.colorProperty())
-        theme.bind(ThemeEngine.getInstance().theme.color2Property())
+        theme2.bind(ThemeEngine.getInstance().theme.color2Property())
+        theme2Dark.bind(ThemeEngine.getInstance().theme.color2DarkProperty())
         binding.backend.setOnApplyWindowInsetsListener { _, insets ->
             insets
         }
@@ -631,7 +689,7 @@ class MainActivity : FCLActivity(), OnSelectListener, View.OnClickListener {
                 "${application.packageName}.provider",
                 file
             )
-            intent.setType("text/plain")
+            intent.type = "text/plain"
             intent.putExtra(Intent.EXTRA_STREAM, uri)
             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             startActivity(
@@ -676,6 +734,31 @@ class MainActivity : FCLActivity(), OnSelectListener, View.OnClickListener {
             }
         } else {
             permissionResultLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    private fun shouldPlayVideo(): Boolean {
+        return File(FCLPath.LIVE_BACKGROUND_PATH).exists()
+    }
+
+    fun setupLiveBackground() {
+        if (shouldPlayVideo()) {
+            binding.videoView.visibility = View.VISIBLE
+            binding.videoView.setVideoPath(FCLPath.LIVE_BACKGROUND_PATH)
+            binding.videoView.setOnPreparedListener {
+                it.isLooping = true
+                binding.videoView.start()
+            }
+            binding.videoView.setOnCompletionListener {
+                binding.videoView.seekTo(0)
+                binding.videoView.start()
+            }
+            binding.videoView.setOnErrorListener { mp, what, extra ->
+                return@setOnErrorListener true
+            }
+        } else {
+            binding.videoView.visibility = View.GONE
+            binding.videoView.stopPlayback()
         }
     }
 }

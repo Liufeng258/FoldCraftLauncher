@@ -15,6 +15,7 @@ public class FCLPath {
     public static String CACHE_DIR;
 
     public static String RUNTIME_DIR;
+    public static String MOD_RUNTIME_DIR;
     public static String JAVA_8_PATH;
     public static String JAVA_11_PATH;
     public static String JAVA_17_PATH;
@@ -23,7 +24,6 @@ public class FCLPath {
     public static String JNA_PATH;
     public static String LWJGL_DIR;
     public static String CACIOCAVALLO_8_DIR;
-    public static String CACIOCAVALLO_11_DIR;
     public static String CACIOCAVALLO_17_DIR;
 
     public static String FILES_DIR;
@@ -39,6 +39,7 @@ public class FCLPath {
     public static String MIO_LAUNCH_WRAPPER;
     public static String LT_BACKGROUND_PATH;
     public static String DK_BACKGROUND_PATH;
+    public static String LIVE_BACKGROUND_PATH;
 
     public static void loadPaths(Context context) {
         CONTEXT = context;
@@ -57,8 +58,9 @@ public class FCLPath {
         JNA_PATH = RUNTIME_DIR + "/jna";
         LWJGL_DIR = RUNTIME_DIR + "/lwjgl";
         CACIOCAVALLO_8_DIR = RUNTIME_DIR + "/caciocavallo";
-        CACIOCAVALLO_11_DIR = RUNTIME_DIR + "/caciocavallo11";
         CACIOCAVALLO_17_DIR = RUNTIME_DIR + "/caciocavallo17";
+
+        MOD_RUNTIME_DIR = context.getDir("runtime_mod", 0).getAbsolutePath();
 
         FILES_DIR = context.getFilesDir().getAbsolutePath();
         PLUGIN_DIR = FILES_DIR + "/plugins";
@@ -72,17 +74,18 @@ public class FCLPath {
         MIO_LAUNCH_WRAPPER = PLUGIN_DIR + "/MioLaunchWrapper.jar";
         LT_BACKGROUND_PATH = BACKGROUND_DIR + "/lt.png";
         DK_BACKGROUND_PATH = BACKGROUND_DIR + "/dk.png";
+        LIVE_BACKGROUND_PATH = BACKGROUND_DIR + "/live.mp4";
 
         init(LOG_DIR);
         init(CACHE_DIR);
         init(RUNTIME_DIR);
+        init(MOD_RUNTIME_DIR);
         init(JAVA_8_PATH);
         init(JAVA_11_PATH);
         init(JAVA_17_PATH);
         init(JAVA_21_PATH);
         init(LWJGL_DIR);
         init(CACIOCAVALLO_8_DIR);
-        init(CACIOCAVALLO_11_DIR);
         init(CACIOCAVALLO_17_DIR);
         init(FILES_DIR);
         init(PLUGIN_DIR);

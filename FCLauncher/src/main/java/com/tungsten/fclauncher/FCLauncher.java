@@ -16,8 +16,8 @@ import com.oracle.dalvik.VMLauncher;
 import com.tungsten.fclauncher.bridge.FCLBridge;
 import com.tungsten.fclauncher.plugins.DriverPlugin;
 import com.tungsten.fclauncher.plugins.FFmpegPlugin;
-import com.tungsten.fclauncher.plugins.RendererPlugin;
 import com.tungsten.fclauncher.utils.Architecture;
+import com.tungsten.fclauncher.utils.FCLPath;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -81,27 +81,28 @@ public class FCLauncher {
         return jreReleaseMap;
     }
 
-    public static String getJreLibDir(String javaPath) throws IOException {
-        String jreArchitecture = readJREReleaseProperties(javaPath).get("OS_ARCH");
-        if (Architecture.archAsInt(jreArchitecture) == ARCH_X86) {
-            jreArchitecture = "i386/i486/i586";
+    public static String getJavaLibDir(String javaPath) throws IOException {
+        String architecture = readJREReleaseProperties(javaPath).get("OS_ARCH");
+        if (Architecture.archAsInt(architecture) == ARCH_X86) {
+            architecture = "i386/i486/i586";
         }
-        String jreLibDir = "/lib";
-        if (jreArchitecture == null) {
+        String libDir = "/lib";
+        if (architecture == null) {
             throw new IOException("Unsupported architecture!");
         }
-        for (String arch : jreArchitecture.split("/")) {
+        for (String arch : architecture.split("/")) {
             File file = new File(javaPath, "lib/" + arch);
             if (file.exists() && file.isDirectory()) {
-                jreLibDir = "/lib/" + arch;
+                libDir = "/lib/" + arch;
             }
         }
-        return jreLibDir;
+        return libDir;
     }
 
     private static String getJvmLibDir(String javaPath) throws IOException {
         String jvmLibDir;
-        File jvmFile = new File(javaPath + getJreLibDir(javaPath) + "/server/libjvm.so");
+        String path = (isJDK8(javaPath) ? "/jre" : "") + getJavaLibDir(javaPath);
+        File jvmFile = new File(javaPath + path + "/server/libjvm.so");
         jvmLibDir = jvmFile.exists() ? "/server" : "/client";
         return jvmLibDir;
     }
@@ -109,22 +110,36 @@ public class FCLauncher {
     private static String getLibraryPath(Context context, String javaPath, String pluginLibPath) throws IOException {
         String nativeDir = context.getApplicationInfo().nativeLibraryDir;
         String libDirName = is64BitsDevice() ? "lib64" : "lib";
-        String jreLibDir = getJreLibDir(javaPath);
+        String javaLibDir = getJavaLibDir(javaPath);
         String jvmLibDir = getJvmLibDir(javaPath);
         String jliLibDir = "/jli";
         String split = ":";
+        String jreLibDir;
+        if (isJDK8(javaPath)) {
+            jreLibDir = javaPath +
+                    "/jre" +
+                    javaLibDir +
+                    jvmLibDir +
+                    split +
+
+                    javaPath +
+                    "/jre" +
+                    javaLibDir;
+        } else {
+            jreLibDir = javaPath +
+                    javaLibDir +
+                    jvmLibDir;
+        }
         return javaPath +
-                jreLibDir +
+                javaLibDir +
                 split +
 
                 javaPath +
-                jreLibDir +
+                javaLibDir +
                 jliLibDir +
                 split +
 
-                javaPath +
                 jreLibDir +
-                jvmLibDir +
                 split +
 
                 "/system/" +
@@ -144,6 +159,9 @@ public class FCLauncher {
                 split +
 
                 ((pluginLibPath != null) ? pluginLibPath + split : "") +
+
+                FCLPath.MOD_RUNTIME_DIR +
+                split +
 
                 nativeDir;
     }
@@ -166,6 +184,9 @@ public class FCLauncher {
                 split +
 
                 ((pluginLibPath != null && !pluginLibPath.isEmpty()) ? pluginLibPath + split : "") +
+
+                FCLPath.MOD_RUNTIME_DIR +
+                split +
 
                 nativeDir;
     }
@@ -194,6 +215,10 @@ public class FCLauncher {
         envMap.put("PATH", config.getJavaPath() + "/bin:" + Os.getenv("PATH"));
         envMap.put("LD_LIBRARY_PATH", getLibraryPath(config.getContext(), config.getRenderer().getPath()));
         envMap.put("FORCE_VSYNC", "false");
+
+        // Native mod env var
+        envMap.put("MOD_ANDROID_RUNTIME", FCLPath.MOD_RUNTIME_DIR == null ? "" : FCLPath.MOD_RUNTIME_DIR);
+
         FFmpegPlugin.discover(config.getContext());
         if (FFmpegPlugin.isAvailable) {
             envMap.put("PATH", FFmpegPlugin.libraryPath + ":" + envMap.get("PATH"));
@@ -213,6 +238,9 @@ public class FCLauncher {
 
         if (config.getInstalledModLoaders().isInstallForge()) {
             envMap.put("INST_FORGE", "1");
+        }
+        if (config.getInstalledModLoaders().isInstallCleanroom()) {
+            envMap.put("INST_CLEANROOM", "1");
         }
         if (config.getInstalledModLoaders().isInstallNeoForge()) {
             envMap.put("INST_NEOFORGE", "1");
@@ -266,7 +294,7 @@ public class FCLauncher {
             return;
         }
         if (FCLBridge.BACKEND_IS_BOAT) {
-            envMap.put("LIBGL_STRING", renderer.toString());
+            envMap.put("LIBGL_STRING", renderer.getName());
             envMap.put("LIBGL_NAME", renderer.getGlName());
             envMap.put("LIBEGL_NAME", renderer.getEglName());
         }
@@ -286,7 +314,7 @@ public class FCLauncher {
         } else if (renderer.isEqual(Renderer.ID_NGGL4ES)) {
             envMap.put("LIBGL_USE_MC_COLOR", "1");
             envMap.put("DLOPEN", "libspirv-cross-c-shared.so");
-            envMap.put("LIBGL_GL", "30");
+            envMap.put("LIBGL_GL", "31");
             envMap.put("LIBGL_ES", "3");
             envMap.put("LIBGL_NORMALIZE", "1");
             envMap.put("LIBGL_NOINTOVLHACK", "1");
@@ -345,20 +373,22 @@ public class FCLauncher {
     }
 
     private static void setUpJavaRuntime(FCLConfig config, FCLBridge bridge) throws IOException {
-        String jreLibDir = config.getJavaPath() + getJreLibDir(config.getJavaPath());
-        String jliLibDir = new File(jreLibDir + "/jli/libjli.so").exists() ? jreLibDir + "/jli" : jreLibDir;
-        String jvmLibDir = jreLibDir + getJvmLibDir(config.getJavaPath());
+        String javaLibDir = config.getJavaPath() + getJavaLibDir(config.getJavaPath());
+        String jliLibDir = new File(javaLibDir + "/jli/libjli.so").exists() ? javaLibDir + "/jli" : javaLibDir;
+        if (isJDK8(config.getJavaPath()))
+            javaLibDir = config.getJavaPath() + "/jre" + getJavaLibDir(config.getJavaPath());
+        String jvmLibDir = javaLibDir + getJvmLibDir(config.getJavaPath());
         // dlopen jre
         bridge.dlopen(jliLibDir + "/libjli.so");
         bridge.dlopen(jvmLibDir + "/libjvm.so");
-        bridge.dlopen(jreLibDir + "/libfreetype.so");
-        bridge.dlopen(jreLibDir + "/libverify.so");
-        bridge.dlopen(jreLibDir + "/libjava.so");
-        bridge.dlopen(jreLibDir + "/libnet.so");
-        bridge.dlopen(jreLibDir + "/libnio.so");
-        bridge.dlopen(jreLibDir + "/libawt.so");
-        bridge.dlopen(jreLibDir + "/libawt_headless.so");
-        bridge.dlopen(jreLibDir + "/libfontmanager.so");
+        bridge.dlopen(javaLibDir + "/libfreetype.so");
+        bridge.dlopen(javaLibDir + "/libverify.so");
+        bridge.dlopen(javaLibDir + "/libjava.so");
+        bridge.dlopen(javaLibDir + "/libnet.so");
+        bridge.dlopen(javaLibDir + "/libnio.so");
+        bridge.dlopen(javaLibDir + "/libawt.so");
+        bridge.dlopen(javaLibDir + "/libawt_headless.so");
+        bridge.dlopen(javaLibDir + "/libfontmanager.so");
         for (File file : locateLibs(new File(config.getJavaPath()))) {
             bridge.dlopen(file.getAbsolutePath());
         }
@@ -569,6 +599,10 @@ public class FCLauncher {
                     + manufacturer.substring(1).toLowerCase();
         }
         return String.format("%s %s %s", manufacturer, product, modelName);
+    }
+
+    public static boolean isJDK8(String javaPath) {
+        return new File(javaPath, "jre").exists() && new File(javaPath, "bin/javac").exists();
     }
 
 }
